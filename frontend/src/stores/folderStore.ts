@@ -184,6 +184,15 @@ export const useFolderStore = defineStore('folder', () => {
       if (response.success && response.data) {
         // Refresh folder tree after creating
         await loadFolderTree()
+        // If the new folder has a parent, reload the parent's content
+        if (folderData.parentId) {
+          folderContent.value.delete(folderData.parentId)
+          await loadFolderContent(folderData.parentId)
+        }
+        // Clear search results since new folder might match current search
+        searchResults.value = { folders: [], files: [] }
+        // Also reload folder tree to show the new folder in the left panel
+        await loadFolderTree()
         return response.data
       } else {
         error.value = response.error || 'Failed to create folder'
@@ -209,10 +218,26 @@ export const useFolderStore = defineStore('folder', () => {
     try {
       const response = await folderApi.updateFolder(id, folderData)
       if (response.success && response.data) {
-        // Refresh folder tree after updating
+        // Get the updated folder to know its parent
+        const folder = await folderApi.getFolderById(id)
+        if (folder.success && folder.data) {
+          // Clear cached content for this folder and reload it
+          folderContent.value.delete(id)
+          await loadFolderContent(id)
+          
+          // Also reload parent folder content if this folder has a parent
+          if (folder.data.parentId) {
+            folderContent.value.delete(folder.data.parentId)
+            await loadFolderContent(folder.data.parentId)
+          }
+        }
+        
+        // Clear search results since updated folder might match current search
+        searchResults.value = { folders: [], files: [] }
+        
+        // Refresh folder tree to reflect the update in the left panel
         await loadFolderTree()
-        // Clear cached content for this folder
-        folderContent.value.delete(id)
+        
         return response.data
       } else {
         error.value = response.error || 'Failed to update folder'
@@ -231,12 +256,33 @@ export const useFolderStore = defineStore('folder', () => {
     error.value = null
 
     try {
+      // Get folder info before deleting to know the parent
+      const folderToDelete = getFolderById.value(id)
+      const parentId = folderToDelete?.parentId
+
       const response = await folderApi.deleteFolder(id)
       if (response.success) {
-        // Refresh folder tree after deleting
-        await loadFolderTree()
+        // Remove from expanded folders
+        expandedFolders.value.delete(id)
+        
         // Clear cached content for this folder
         folderContent.value.delete(id)
+        
+        // Remove from search results if present
+        searchResults.value.folders = searchResults.value.folders.filter(f => f.id !== id)
+        
+        // Clear cached content for parent folder if it exists and reload it
+        if (parentId) {
+          folderContent.value.delete(parentId)
+          await loadFolderContent(parentId)
+        }
+        
+        // Clear search results since folder deletion might affect current search
+        searchResults.value = { folders: [], files: [] }
+        
+        // Refresh folder tree after deleting
+        await loadFolderTree()
+        
         return true
       } else {
         error.value = response.error || 'Failed to delete folder'
@@ -264,8 +310,14 @@ export const useFolderStore = defineStore('folder', () => {
     try {
       const response = await fileApi.createFile(fileData)
       if (response.success && response.data) {
-        // Clear cached content for the parent folder
+        // Clear cached content for the parent folder and reload it
         folderContent.value.delete(fileData.folderId)
+        // Always reload the folder content to show the new file
+        await loadFolderContent(fileData.folderId)
+        // Clear search results since new file might match current search
+        searchResults.value = { folders: [], files: [] }
+        // Also reload folder tree in case the file creation affects folder structure
+        await loadFolderTree()
         return response.data
       } else {
         error.value = response.error || 'Failed to create file'
@@ -292,10 +344,17 @@ export const useFolderStore = defineStore('folder', () => {
     try {
       const response = await fileApi.updateFile(id, fileData)
       if (response.success && response.data) {
-        // Clear cached content for the parent folder
-        if (fileData.folderId) {
-          folderContent.value.delete(fileData.folderId)
+        // Get the updated file to know its folder
+        const file = await fileApi.getFileById(id)
+        if (file.success && file.data) {
+          // Clear cached content for the parent folder and reload it
+          folderContent.value.delete(file.data.folderId)
+          await loadFolderContent(file.data.folderId)
         }
+        
+        // Clear search results since updated file might match current search
+        searchResults.value = { folders: [], files: [] }
+        
         return response.data
       } else {
         error.value = response.error || 'Failed to update file'
@@ -316,8 +375,16 @@ export const useFolderStore = defineStore('folder', () => {
     try {
       const response = await fileApi.deleteFile(id)
       if (response.success) {
-        // Clear cached content for the parent folder
+        // Clear cached content for the parent folder and reload it
         folderContent.value.delete(folderId)
+        // Always reload the folder content to show the updated state
+        await loadFolderContent(folderId)
+        // Remove from search results if present
+        searchResults.value.files = searchResults.value.files.filter(f => f.id !== id)
+        // Clear search results since file deletion might affect current search
+        searchResults.value = { folders: [], files: [] }
+        // Also reload folder tree in case the file deletion affects folder structure
+        await loadFolderTree()
         return true
       } else {
         error.value = response.error || 'Failed to delete file'

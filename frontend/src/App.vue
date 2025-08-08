@@ -17,9 +17,6 @@
       <aside class="folder-panel">
         <div class="panel-header">
           <h2>Folders</h2>
-          <button @click="refreshFolders" class="refresh-btn">
-            <RefreshCw class="icon" />
-          </button>
         </div>
         <div class="folder-tree">
           <FolderTree 
@@ -132,13 +129,22 @@
                   <Folder class="folder-icon" />
                   <span class="folder-name">{{ folder.name }}</span>
                 </div>
-                <button 
-                  @click.stop="handleDelete('folder', folder.id, folder.name)"
-                  class="delete-btn"
-                  title="Delete folder"
-                >
-                  <Trash2 class="icon" />
-                </button>
+                <div class="action-buttons">
+                  <button 
+                    @click.stop="handleEdit('folder', folder.id, folder.name)"
+                    class="edit-btn"
+                    title="Edit folder"
+                  >
+                    <Edit3 class="icon" />
+                  </button>
+                  <button 
+                    @click.stop="handleDelete('folder', folder.id, folder.name)"
+                    class="delete-btn"
+                    title="Delete folder"
+                  >
+                    <Trash2 class="icon" />
+                  </button>
+                </div>
               </div>
             </div>
             
@@ -159,13 +165,22 @@
                     <span class="file-size">{{ formatFileSize(file.size) }}</span>
                   </div>
                 </div>
-                <button 
-                  @click.stop="handleDelete('file', file.id, file.name, selectedFolder?.id)"
-                  class="delete-btn"
-                  title="Delete file"
-                >
-                  <Trash2 class="icon" />
-                </button>
+                <div class="action-buttons">
+                  <button 
+                    @click.stop="handleEdit('file', file.id, file.name, selectedFolder?.id, file.size)"
+                    class="edit-btn"
+                    title="Edit file"
+                  >
+                    <Edit3 class="icon" />
+                  </button>
+                  <button 
+                    @click.stop="handleDelete('file', file.id, file.name, selectedFolder?.id)"
+                    class="delete-btn"
+                    title="Delete file"
+                  >
+                    <Trash2 class="icon" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -199,6 +214,23 @@
       @close="showDeleteModal = false"
       @confirm="confirmDelete"
     />
+    
+    <EditFolderModal
+      :is-open="showEditFolderModal"
+      :folder-name="editItem?.name || ''"
+      :loading="folderStore.loading"
+      @close="showEditFolderModal = false"
+      @update="handleUpdateFolder"
+    />
+    
+    <EditFileModal
+      :is-open="showEditFileModal"
+      :file-name="editItem?.name || ''"
+      :file-size="editItem?.size || 0"
+      :loading="folderStore.loading"
+      @close="showEditFileModal = false"
+      @update="handleUpdateFile"
+    />
   </div>
 </template>
 
@@ -210,6 +242,8 @@ import FolderTree from '@/components/FolderTree.vue'
 import CreateFolderModal from '@/components/CreateFolderModal.vue'
 import CreateFileModal from '@/components/CreateFileModal.vue'
 import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
+import EditFolderModal from '@/components/EditFolderModal.vue'
+import EditFileModal from '@/components/EditFileModal.vue'
 import type { Folder as FolderType } from '@/types/folder'
 
 const folderStore = useFolderStore()
@@ -223,7 +257,10 @@ const showFiles = ref(true)
 const showCreateFolderModal = ref(false)
 const showCreateFileModal = ref(false)
 const showDeleteModal = ref(false)
+const showEditFolderModal = ref(false)
+const showEditFileModal = ref(false)
 const deleteItem = ref<{ type: 'folder' | 'file'; id: number; name: string; folderId?: number } | null>(null)
+const editItem = ref<{ type: 'folder' | 'file'; id: number; name: string; folderId?: number; size?: number } | null>(null)
 
 // Computed properties
 const filteredFolders = computed(() => {
@@ -312,6 +349,12 @@ const handleCreateFolder = async (data: { name: string; parentId?: number }) => 
   
   if (result) {
     showCreateFolderModal.value = false
+    // Reload current folder content if we're in a folder
+    if (selectedFolder.value) {
+      await folderStore.loadFolderContent(selectedFolder.value.id)
+    }
+    // Also reload folder tree to show the new folder in the left panel
+    await folderStore.loadFolderTree()
   }
 }
 
@@ -328,6 +371,12 @@ const handleCreateFile = async (data: { name: string; size: number; folderId: nu
   
   if (result) {
     showCreateFileModal.value = false
+    // Reload current folder content to show the new file
+    if (selectedFolder.value) {
+      await folderStore.loadFolderContent(selectedFolder.value.id)
+    }
+    // Also reload folder tree in case the file affects folder structure
+    await folderStore.loadFolderTree()
   }
 }
 
@@ -336,20 +385,100 @@ const handleDelete = (type: 'folder' | 'file', id: number, name: string, folderI
   showDeleteModal.value = true
 }
 
+const handleEdit = (type: 'folder' | 'file', id: number, name: string, folderId?: number, size?: number) => {
+  editItem.value = { type, id, name, folderId, size }
+  if (type === 'folder') {
+    showEditFolderModal.value = true
+  } else {
+    showEditFileModal.value = true
+  }
+}
+
 const confirmDelete = async () => {
   if (!deleteItem.value) return
   
   let success = false
   
-  if (deleteItem.value.type === 'folder') {
+    if (deleteItem.value.type === 'folder') {
     success = await folderStore.deleteFolder(deleteItem.value.id)
+    // If we deleted the currently selected folder, clear selection
+    if (success && selectedFolder.value?.id === deleteItem.value.id) {
+      selectedFolder.value = null
+    }
+    // If we deleted a folder but not the currently selected one, reload current folder content
+    if (success && selectedFolder.value && selectedFolder.value.id !== deleteItem.value.id) {
+      await folderStore.loadFolderContent(selectedFolder.value.id)
+    }
+    // Also reload folder tree to reflect the deletion in the left panel
+    if (success) {
+      await folderStore.loadFolderTree()
+    }
   } else {
-    success = await folderStore.deleteFile(deleteItem.value.id, deleteItem.value.folderId!)
-  }
+      success = await folderStore.deleteFile(deleteItem.value.id, deleteItem.value.folderId!)
+      // Reload current folder content to reflect the deletion
+      if (success && selectedFolder.value) {
+        await folderStore.loadFolderContent(selectedFolder.value.id)
+      }
+      // Also reload folder tree in case the file deletion affects folder structure
+      if (success) {
+        await folderStore.loadFolderTree()
+      }
+    }
   
   if (success) {
     showDeleteModal.value = false
     deleteItem.value = null
+  }
+}
+
+const handleUpdateFolder = async (data: { name: string }) => {
+  if (!editItem.value || editItem.value.type !== 'folder') return
+  
+  // Get the folder to be updated to know its current parent
+  const folderToUpdate = folderStore.getFolderById(editItem.value.id)
+  if (!folderToUpdate) return
+  
+  // Calculate the correct path based on parent
+  let newPath: string
+  if (folderToUpdate.parentId) {
+    // Find parent folder to get its path
+    const parentFolder = folderStore.getFolderById(folderToUpdate.parentId)
+    newPath = parentFolder ? `${parentFolder.path}/${data.name}` : `/${data.name}`
+  } else {
+    newPath = `/${data.name}`
+  }
+  
+  const result = await folderStore.updateFolder(editItem.value.id, {
+    name: data.name,
+    path: newPath
+  })
+  
+  if (result) {
+    showEditFolderModal.value = false
+    editItem.value = null
+  }
+}
+
+const handleUpdateFile = async (data: { name: string; size: number }) => {
+  if (!editItem.value || editItem.value.type !== 'file') return
+  
+  // Get the file to be updated to know its current folder
+  const fileToUpdate = folderStore.getFiles(selectedFolder.value?.id || 0).find(f => f.id === editItem.value?.id)
+  if (!fileToUpdate) return
+  
+  // Calculate the correct path based on current folder
+  const newPath = selectedFolder.value ? `${selectedFolder.value.path}/${data.name}` : `/${data.name}`
+  
+  const result = await folderStore.updateFile(editItem.value.id, {
+    name: data.name,
+    path: newPath,
+    size: data.size,
+    folderId: selectedFolder.value?.id || 0
+  })
+  
+  if (result) {
+    showEditFileModal.value = false
+    editItem.value = null
   }
 }
 
@@ -674,25 +803,49 @@ watch(() => folderStore.folderTree, (newTree) => {
   cursor: pointer;
 }
 
+.action-buttons {
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.folder-item:hover .action-buttons,
+.file-item:hover .action-buttons {
+  opacity: 1;
+}
+
+.edit-btn,
 .delete-btn {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: 4px;
   padding: 0.25rem;
   cursor: pointer;
   transition: all 0.2s;
-  opacity: 0;
 }
 
-.folder-item:hover .delete-btn,
-.file-item:hover .delete-btn {
-  opacity: 1;
+.delete-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.edit-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+  transform: scale(1.1);
 }
 
 .delete-btn:hover {
   background: rgba(239, 68, 68, 0.2);
   border-color: rgba(239, 68, 68, 0.4);
   transform: scale(1.1);
+}
+
+.edit-btn .icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: #3b82f6;
 }
 
 .delete-btn .icon {

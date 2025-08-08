@@ -27,8 +27,8 @@ export class FileRepository implements IFileRepository {
 
   async create(file: NewFile): Promise<File> {
     await db.insert(files).values(file)
-    // Get the inserted file by querying for it
-    const result = await db.select().from(files).where(eq(files.name, file.name)).limit(1)
+    // Get the inserted file by querying for it with more specific conditions
+    const result = await db.select().from(files).where(eq(files.path, file.path)).limit(1)
     return result[0]
   }
 

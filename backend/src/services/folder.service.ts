@@ -89,6 +89,16 @@ export class FolderService implements IFolderService {
       throw new Error('Folder not found')
     }
 
+    // If path is being updated, validate it
+    if (folder.path) {
+      // Check if the new path already exists (excluding the current folder)
+      const allFolders = await this.folderRepository.findAll()
+      const pathExists = allFolders.some(f => f.path === folder.path && f.id !== id)
+      if (pathExists) {
+        throw new Error('Folder with this path already exists')
+      }
+    }
+
     return await this.folderRepository.update(id, folder)
   }
 

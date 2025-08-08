@@ -34,8 +34,8 @@ export class FolderRepository implements IFolderRepository {
 
   async create(folder: NewFolder): Promise<Folder> {
     await db.insert(folders).values(folder)
-    // Get the inserted folder by querying for it
-    const result = await db.select().from(folders).where(eq(folders.name, folder.name)).limit(1)
+    // Get the inserted folder by querying for it with more specific conditions
+    const result = await db.select().from(folders).where(eq(folders.path, folder.path)).limit(1)
     return result[0]
   }
 

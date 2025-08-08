@@ -10,6 +10,8 @@ declare module 'vue' {
     CreateFileModal: typeof import('./src/components/CreateFileModal.vue')['default']
     CreateFolderModal: typeof import('./src/components/CreateFolderModal.vue')['default']
     DeleteConfirmModal: typeof import('./src/components/DeleteConfirmModal.vue')['default']
+    EditFileModal: typeof import('./src/components/EditFileModal.vue')['default']
+    EditFolderModal: typeof import('./src/components/EditFolderModal.vue')['default']
     FolderTree: typeof import('./src/components/FolderTree.vue')['default']
     FolderTreeNode: typeof import('./src/components/FolderTreeNode.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

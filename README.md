@@ -1,19 +1,6 @@
 # Windows Explorer Web App
 
-A modern, responsive web application that mimics the Windows Explorer interface with a dual-panel layout, hierarchical folder structure, and file management capabilities.
-
-## 🌟 Features
-
-- **Dual-Panel Layout**: Left panel for folder tree navigation, right panel for content display
-- **Hierarchical Folder Structure**: Nested folder navigation with expand/collapse functionality
-- **File Management**: Display files with size information and icons
-- **Search Functionality**: Real-time search across folders and files
-- **Breadcrumb Navigation**: Easy navigation through folder hierarchy
-- **Glassmorphism UI**: Modern, translucent design with backdrop blur effects
-- **Responsive Design**: Works on desktop and tablet devices
-- **Real-time Updates**: Live folder content loading and refresh capabilities
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend
 - **Node.js** - Runtime environment
@@ -32,13 +19,13 @@ A modern, responsive web application that mimics the Windows Explorer interface 
 - **Lucide Vue Next** - Icon library
 - **Axios** - HTTP client
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Node.js (v18 or higher)
 - MySQL (v8.0 or higher)
 - npm or yarn package manager
 
-## 🚀 Installation & Setup
+## Installation & Setup
 
 ### 1. Clone the Repository
 ```bash
@@ -114,7 +101,7 @@ windows-explorer-app/
 └── README.md
 ```
 
-## 🎨 UI/UX Features
+## UI/UX Features
 
 ### Glassmorphism Design
 - Translucent panels with backdrop blur effects
@@ -214,25 +201,5 @@ npm run preview          # Preview production build
 2. Deploy the `dist` folder to a static hosting service
 3. Update API base URL for production
 
-## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Vue.js team for the amazing framework
-- Drizzle ORM for excellent database tooling
-- Lucide for beautiful icons
-- The open-source community for inspiration and tools
-
----
-
-**Happy Coding! 🎉**

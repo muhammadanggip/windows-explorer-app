@@ -1,8 +1,12 @@
 import { Router } from 'express'
 import { FileRepository } from '../repositories/file.repository'
+import { FolderRepository } from '../repositories/folder.repository'
+import { FileService } from '../services/file.service'
 
 const router = Router()
 const fileRepository = new FileRepository()
+const folderRepository = new FolderRepository()
+const fileService = new FileService(fileRepository, folderRepository)
 
 // GET /api/v1/files - Get all files
 router.get('/', async (req, res) => {
@@ -64,7 +68,7 @@ router.get('/folder/:folderId', async (req, res) => {
 // POST /api/v1/files - Create file
 router.post('/', async (req, res) => {
   try {
-    const file = await fileRepository.create(req.body)
+    const file = await fileService.createFile(req.body)
     res.status(201).json({
       success: true,
       data: file,
@@ -81,7 +85,7 @@ router.post('/', async (req, res) => {
 // PUT /api/v1/files/:id - Update file
 router.put('/:id', async (req, res) => {
   try {
-    const file = await fileRepository.update(Number(req.params.id), req.body)
+    const file = await fileService.updateFile(Number(req.params.id), req.body)
     if (!file) {
       return res.status(404).json({
         success: false,
@@ -104,7 +108,7 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/v1/files/:id - Delete file
 router.delete('/:id', async (req, res) => {
   try {
-    const deleted = await fileRepository.delete(Number(req.params.id))
+    const deleted = await fileService.deleteFile(Number(req.params.id))
     if (!deleted) {
       return res.status(404).json({
         success: false,
