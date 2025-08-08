@@ -13,7 +13,8 @@
     "db:setup": "tsx src/database/setup.ts",
     "db:create-tables": "tsx src/database/create-tables.ts",
     "db:migrate": "tsx src/database/migrate.ts",
-    "db:seed": "tsx src/database/seed.ts"
+    "db:seed": "tsx src/database/seed.ts",
+    "add-folder": "tsx src/scripts/add-folder.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

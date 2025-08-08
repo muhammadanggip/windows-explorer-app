@@ -53,7 +53,56 @@
         </div>
         
         <div class="content-area">
-          <div v-if="!selectedFolder" class="empty-state">
+          <!-- Search Results -->
+          <div v-if="hasSearchResults" class="search-results">
+            <div class="content-header">
+              <h3>Search Results for "{{ searchQuery }}"</h3>
+              <div class="search-stats">
+                <span>{{ searchResults.folders.length }} folders, {{ searchResults.files.length }} files</span>
+              </div>
+            </div>
+            
+            <!-- Search Results - Folders -->
+            <div v-if="searchResults.folders.length > 0" class="search-section">
+              <h4>Folders</h4>
+              <div class="search-folders-grid">
+                <div 
+                  v-for="folder in searchResults.folders" 
+                  :key="folder.id"
+                  class="folder-item"
+                  @click="selectFolder(folder)"
+                >
+                  <Folder class="folder-icon" />
+                  <div class="folder-info">
+                    <span class="folder-name">{{ folder.name }}</span>
+                    <span class="folder-path">{{ folder.path }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Search Results - Files -->
+            <div v-if="searchResults.files.length > 0" class="search-section">
+              <h4>Files</h4>
+              <div class="search-files-grid">
+                <div 
+                  v-for="file in searchResults.files" 
+                  :key="file.id"
+                  class="file-item"
+                >
+                  <File class="file-icon" />
+                  <div class="file-info">
+                    <span class="file-name">{{ file.name }}</span>
+                    <span class="file-size">{{ formatFileSize(file.size) }}</span>
+                    <span class="file-path">{{ file.path }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Normal Folder Content -->
+          <div v-else-if="!selectedFolder" class="empty-state">
             <FolderOpen class="empty-icon" />
             <p>Select a folder from the left panel to view its contents</p>
           </div>
@@ -120,6 +169,17 @@ const filteredFolders = computed(() => {
   return folderStore.searchFolders(searchQuery.value)
 })
 
+const searchResults = computed(() => {
+  return folderStore.searchResults
+})
+
+const hasSearchResults = computed(() => {
+  return searchQuery.value && (
+    searchResults.value.folders.length > 0 || 
+    searchResults.value.files.length > 0
+  )
+})
+
 const subfolders = computed(() => {
   if (!selectedFolder.value) return []
   return folderStore.getSubfolders(selectedFolder.value.id)
@@ -156,8 +216,12 @@ const refreshFolders = async () => {
   await folderStore.loadFolderTree()
 }
 
-const handleSearch = () => {
-  // Search is handled by computed property
+const handleSearch = async () => {
+  if (searchQuery.value.trim()) {
+    await folderStore.searchFoldersAndFiles(searchQuery.value)
+  } else {
+    folderStore.searchResults = { folders: [], files: [] }
+  }
 }
 
 const formatFileSize = (bytes: number): string => {
@@ -481,5 +545,59 @@ watch(() => folderStore.folderTree, (newTree) => {
   font-size: 0.8rem;
   color: rgba(51, 65, 85, 0.7);
   margin-top: 0.25rem;
+}
+
+/* Search Results Styles */
+.search-results {
+  padding: 1rem;
+}
+
+.search-stats {
+  font-size: 0.9rem;
+  color: rgba(51, 65, 85, 0.7);
+  margin-top: 0.5rem;
+}
+
+.search-section {
+  margin-bottom: 2rem;
+}
+
+.search-section h4 {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(51, 65, 85, 0.8);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 0.5rem;
+}
+
+.search-folders-grid,
+.search-files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.search-folders-grid .folder-item,
+.search-files-grid .file-item {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.folder-info,
+.file-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.folder-path,
+.file-path {
+  font-size: 0.75rem;
+  color: rgba(51, 65, 85, 0.6);
+  margin-top: 0.25rem;
+  font-family: 'Courier New', monospace;
 }
 </style>

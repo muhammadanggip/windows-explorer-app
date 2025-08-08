@@ -45,6 +45,36 @@ router.get('/tree', async (req, res) => {
   }
 })
 
+// GET /api/v1/folders/search - Search folders and files
+router.get('/search', async (req, res) => {
+  try {
+    const { q: query } = req.query
+    
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Search query is required'
+      })
+    }
+
+    console.log('🔍 Searching for:', query)
+    const searchResults = await folderService.searchFoldersAndFiles(query)
+    console.log('✅ Search completed:', searchResults.folders.length, 'folders,', searchResults.files.length, 'files')
+    
+    res.json({
+      success: true,
+      data: searchResults,
+      message: 'Search completed successfully'
+    })
+  } catch (error) {
+    console.error('❌ Error searching:', error)
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    })
+  }
+})
+
 // GET /api/v1/folders/:id - Get folder by ID
 router.get('/:id', async (req, res) => {
   try {

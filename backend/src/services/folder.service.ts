@@ -11,6 +11,11 @@ export interface FolderWithContent extends Folder {
   files: any[]
 }
 
+export interface SearchResult {
+  folders: Folder[]
+  files: any[]
+}
+
 export interface IFolderService {
   getAllFolders(): Promise<Folder[]>
   getFolderById(id: number): Promise<Folder | null>
@@ -20,6 +25,7 @@ export interface IFolderService {
   createFolder(folder: NewFolder): Promise<Folder>
   updateFolder(id: number, folder: Partial<NewFolder>): Promise<Folder | null>
   deleteFolder(id: number): Promise<boolean>
+  searchFoldersAndFiles(query: string): Promise<SearchResult>
 }
 
 export class FolderService implements IFolderService {
@@ -103,6 +109,33 @@ export class FolderService implements IFolderService {
     }
 
     return await this.folderRepository.delete(id)
+  }
+
+  async searchFoldersAndFiles(query: string): Promise<SearchResult> {
+    const searchQuery = query.toLowerCase().trim()
+    
+    if (!searchQuery) {
+      return { folders: [], files: [] }
+    }
+
+    // Search folders
+    const allFolders = await this.folderRepository.findAll()
+    const matchingFolders = allFolders.filter(folder => 
+      folder.name.toLowerCase().includes(searchQuery) ||
+      folder.path.toLowerCase().includes(searchQuery)
+    )
+
+    // Search files
+    const allFiles = await this.fileRepository.findAll()
+    const matchingFiles = allFiles.filter(file => 
+      file.name.toLowerCase().includes(searchQuery) ||
+      file.extension?.toLowerCase().includes(searchQuery)
+    )
+
+    return {
+      folders: matchingFolders,
+      files: matchingFiles
+    }
   }
 
   private buildTree(folders: Folder[], parentId: number | null = null): FolderWithSubfolders[] {

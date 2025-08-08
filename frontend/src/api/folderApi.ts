@@ -88,6 +88,16 @@ export const folderApi = {
     }
   },
 
+  // Search folders and files
+  async searchFoldersAndFiles(query: string): Promise<ApiResponse<{ folders: Folder[], files: any[] }>> {
+    try {
+      const response = await api.get(`/folders/search?q=${encodeURIComponent(query)}`)
+      return response.data
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
   // Create folder
   async createFolder(folder: {
     name: string

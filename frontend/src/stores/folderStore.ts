@@ -118,6 +118,34 @@ export const useFolderStore = defineStore('folder', () => {
     }
   }
 
+  const searchResults = ref<{ folders: Folder[], files: any[] }>({ folders: [], files: [] })
+  const isSearching = ref(false)
+
+  const searchFoldersAndFiles = async (query: string) => {
+    if (!query.trim()) {
+      searchResults.value = { folders: [], files: [] }
+      return
+    }
+
+    isSearching.value = true
+    error.value = null
+
+    try {
+      const response = await folderApi.searchFoldersAndFiles(query)
+      if (response.success && response.data) {
+        searchResults.value = response.data
+      } else {
+        error.value = response.error || 'Failed to search'
+        searchResults.value = { folders: [], files: [] }
+      }
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'An error occurred'
+      searchResults.value = { folders: [], files: [] }
+    } finally {
+      isSearching.value = false
+    }
+  }
+
   const searchFolders = (query: string): Folder[] => {
     if (!query.trim()) return folderTree.value
 
@@ -148,6 +176,8 @@ export const useFolderStore = defineStore('folder', () => {
     expandedFolders,
     loading,
     error,
+    searchResults,
+    isSearching,
     
     // Getters
     getFolderById,
@@ -160,6 +190,7 @@ export const useFolderStore = defineStore('folder', () => {
     loadFolderContent,
     toggleFolder,
     searchFolders,
+    searchFoldersAndFiles,
     clearError
   }
 })
