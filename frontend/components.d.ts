@@ -7,6 +7,9 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    CreateFileModal: typeof import('./src/components/CreateFileModal.vue')['default']
+    CreateFolderModal: typeof import('./src/components/CreateFolderModal.vue')['default']
+    DeleteConfirmModal: typeof import('./src/components/DeleteConfirmModal.vue')['default']
     FolderTree: typeof import('./src/components/FolderTree.vue')['default']
     FolderTreeNode: typeof import('./src/components/FolderTreeNode.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

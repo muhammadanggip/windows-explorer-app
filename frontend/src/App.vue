@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <header class="app-header">
-      <h1>Windows Explorer</h1>
+      <h1>Infokes Windows Explorer</h1>
       <div class="search-bar">
         <input 
           v-model="searchQuery" 
@@ -34,21 +34,31 @@
       
       <section class="content-panel">
         <div class="panel-header">
-          <h2>{{ selectedFolder ? selectedFolder.name : 'Select a folder' }}</h2>
-          <div class="breadcrumb">
-            <span v-for="(crumb, index) in breadcrumbs" :key="index">
-              <span 
-                v-if="index > 0" 
-                class="breadcrumb-separator"
-              >/</span>
-              <button 
-                @click="navigateToFolder(crumb.id)"
-                class="breadcrumb-item"
-                :class="{ active: crumb.id === selectedFolder?.id }"
-              >
-                {{ crumb.name }}
-              </button>
-            </span>
+          <div class="header-left">
+            <div class="breadcrumb">
+              <span v-for="(crumb, index) in breadcrumbs" :key="index">
+                <span 
+                  v-if="index > 0" 
+                  class="breadcrumb-separator"
+                >/</span>
+                <button 
+                  @click="navigateToFolder(crumb.id)"
+                  class="breadcrumb-item"
+                  :class="{ active: crumb.id === selectedFolder?.id }"
+                >
+                  {{ crumb.name }}
+                </button>
+              </span>
+            </div>
+          </div>
+          
+          <div v-if="selectedFolder" class="header-actions">
+            <button @click="showCreateFolderModal = true" class="action-btn" title="Create Folder">
+              <Plus class="icon" />
+            </button>
+            <button @click="showCreateFileModal = true" class="action-btn" title="Create File">
+              <File class="icon" />
+            </button>
           </div>
         </div>
         
@@ -117,10 +127,18 @@
                 v-for="folder in subfolders" 
                 :key="folder.id"
                 class="folder-item"
-                @click="selectFolder(folder)"
               >
-                <Folder class="folder-icon" />
-                <span class="folder-name">{{ folder.name }}</span>
+                <div class="folder-content" @click="selectFolder(folder)">
+                  <Folder class="folder-icon" />
+                  <span class="folder-name">{{ folder.name }}</span>
+                </div>
+                <button 
+                  @click.stop="handleDelete('folder', folder.id, folder.name)"
+                  class="delete-btn"
+                  title="Delete folder"
+                >
+                  <Trash2 class="icon" />
+                </button>
               </div>
             </div>
             
@@ -134,25 +152,64 @@
                 :key="file.id"
                 class="file-item"
               >
-                <File class="file-icon" />
-                <div class="file-info">
-                  <span class="file-name">{{ file.name }}</span>
-                  <span class="file-size">{{ formatFileSize(file.size) }}</span>
+                <div class="file-content">
+                  <File class="file-icon" />
+                  <div class="file-info">
+                    <span class="file-name">{{ file.name }}</span>
+                    <span class="file-size">{{ formatFileSize(file.size) }}</span>
+                  </div>
                 </div>
+                <button 
+                  @click.stop="handleDelete('file', file.id, file.name, selectedFolder?.id)"
+                  class="delete-btn"
+                  title="Delete file"
+                >
+                  <Trash2 class="icon" />
+                </button>
               </div>
             </div>
           </div>
         </div>
       </section>
     </main>
+    
+    <!-- CRUD Modals -->
+    <CreateFolderModal
+      :is-open="showCreateFolderModal"
+      :parent-folder="selectedFolder"
+      :loading="folderStore.loading"
+      @close="showCreateFolderModal = false"
+      @create="handleCreateFolder"
+    />
+    
+    <CreateFileModal
+      :is-open="showCreateFileModal"
+      :parent-folder="selectedFolder"
+      :loading="folderStore.loading"
+      @close="showCreateFileModal = false"
+      @create="handleCreateFile"
+    />
+    
+    <DeleteConfirmModal
+      :is-open="showDeleteModal"
+      :item-name="deleteItem?.name || ''"
+      :is-folder="deleteItem?.type === 'folder'"
+      :has-children="false"
+      :loading="folderStore.loading"
+      @close="showDeleteModal = false"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { Folder, FolderOpen, File, Search, RefreshCw } from 'lucide-vue-next'
+import { Folder, FolderOpen, File, Search, RefreshCw, Plus, Trash2, Edit3 } from 'lucide-vue-next'
 import { useFolderStore } from '@/stores/folderStore'
 import FolderTree from '@/components/FolderTree.vue'
+import CreateFolderModal from '@/components/CreateFolderModal.vue'
+import CreateFileModal from '@/components/CreateFileModal.vue'
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 import type { Folder as FolderType } from '@/types/folder'
 
 const folderStore = useFolderStore()
@@ -161,6 +218,12 @@ const folderStore = useFolderStore()
 const selectedFolder = ref<FolderType | null>(null)
 const searchQuery = ref('')
 const showFiles = ref(true)
+
+// Modal states
+const showCreateFolderModal = ref(false)
+const showCreateFileModal = ref(false)
+const showDeleteModal = ref(false)
+const deleteItem = ref<{ type: 'folder' | 'file'; id: number; name: string; folderId?: number } | null>(null)
 
 // Computed properties
 const filteredFolders = computed(() => {
@@ -232,6 +295,62 @@ const formatFileSize = (bytes: number): string => {
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+// CRUD Methods
+const handleCreateFolder = async (data: { name: string; parentId?: number }) => {
+  const path = data.parentId 
+    ? `${selectedFolder.value?.path}/${data.name}`
+    : `/${data.name}`
+  
+  const result = await folderStore.createFolder({
+    name: data.name,
+    path,
+    parentId: data.parentId,
+    isRoot: !data.parentId
+  })
+  
+  if (result) {
+    showCreateFolderModal.value = false
+  }
+}
+
+const handleCreateFile = async (data: { name: string; size: number; folderId: number; extension?: string }) => {
+  const path = `${selectedFolder.value?.path}/${data.name}`
+  
+  const result = await folderStore.createFile({
+    name: data.name,
+    path,
+    folderId: data.folderId,
+    size: data.size,
+    extension: data.extension
+  })
+  
+  if (result) {
+    showCreateFileModal.value = false
+  }
+}
+
+const handleDelete = (type: 'folder' | 'file', id: number, name: string, folderId?: number) => {
+  deleteItem.value = { type, id, name, folderId }
+  showDeleteModal.value = true
+}
+
+const confirmDelete = async () => {
+  if (!deleteItem.value) return
+  
+  let success = false
+  
+  if (deleteItem.value.type === 'folder') {
+    success = await folderStore.deleteFolder(deleteItem.value.id)
+  } else {
+    success = await folderStore.deleteFile(deleteItem.value.id, deleteItem.value.folderId!)
+  }
+  
+  if (success) {
+    showDeleteModal.value = false
+    deleteItem.value = null
+  }
 }
 
 // Lifecycle
@@ -366,13 +485,14 @@ watch(() => folderStore.folderTree, (newTree) => {
   -webkit-backdrop-filter: blur(10px);
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin: 0;
   border-left: none;
   border-right: none;
   border-top: none;
   position: relative;
   z-index: 2;
+  gap: 1rem;
 }
 
 .panel-header::after {
@@ -385,12 +505,43 @@ watch(() => folderStore.folderTree, (newTree) => {
   background-color: rgba(255, 255, 255, 0.3);
 }
 
+.header-left {
+  flex: 1;
+}
+
 .panel-header h2 {
-  margin: 0.4rem;
+  margin: 0.4rem 0;
   font-size: 1.1rem;
   font-weight: 600;
   color: rgba(51, 65, 85, 0.9);
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(10px);
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
+}
+
+.action-btn .icon {
+  width: 1rem;
+  height: 1rem;
+  color: rgba(51, 65, 85, 0.8);
 }
 
 .refresh-btn {
@@ -497,10 +648,10 @@ watch(() => folderStore.folderTree, (newTree) => {
 .file-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
-  cursor: pointer;
   transition: all 0.2s;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -513,6 +664,41 @@ watch(() => folderStore.folderTree, (newTree) => {
   box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
   transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.2);
+}
+
+.folder-content,
+.file-content {
+  display: contents;
+  align-items: center;
+  flex: 1;
+  cursor: pointer;
+}
+
+.delete-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 4px;
+  padding: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  opacity: 0;
+}
+
+.folder-item:hover .delete-btn,
+.file-item:hover .delete-btn {
+  opacity: 1;
+}
+
+.delete-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  transform: scale(1.1);
+}
+
+.delete-btn .icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: #ef4444;
 }
 
 .folder-icon,
@@ -598,6 +784,5 @@ watch(() => folderStore.folderTree, (newTree) => {
   font-size: 0.75rem;
   color: rgba(51, 65, 85, 0.6);
   margin-top: 0.25rem;
-  font-family: 'Courier New', monospace;
 }
 </style>

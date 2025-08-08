@@ -139,6 +139,81 @@ export const folderApi = {
   }
 }
 
+// File API operations
+export const fileApi = {
+  // Get all files
+  async getAllFiles(): Promise<ApiResponse<any[]>> {
+    try {
+      const response = await api.get('/files')
+      return response.data
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
+  // Get file by ID
+  async getFileById(id: number): Promise<ApiResponse<any>> {
+    try {
+      const response = await api.get(`/files/${id}`)
+      return response.data
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
+  // Get files by folder ID
+  async getFilesByFolderId(folderId: number): Promise<ApiResponse<any[]>> {
+    try {
+      const response = await api.get(`/files/folder/${folderId}`)
+      return response.data
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
+  // Create file
+  async createFile(file: {
+    name: string
+    path: string
+    folderId: number
+    size: number
+    extension?: string
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await api.post('/files', file)
+      return response.data
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
+  // Update file
+  async updateFile(id: number, file: Partial<{
+    name: string
+    path: string
+    folderId: number
+    size: number
+    extension: string
+  }>): Promise<ApiResponse<any>> {
+    try {
+      const response = await api.put(`/files/${id}`, file)
+      return response.data
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
+  // Delete file
+  async deleteFile(id: number): Promise<ApiResponse<void>> {
+    try {
+      const response = await api.delete(`/files/${id}`)
+      return response.data
+    } catch (error) {
+      return handleApiError(error)
+    }
+  }
+}
+
 function handleApiError(error: any): ApiResponse<any> {
   if (error.response) {
     // Server responded with error status
