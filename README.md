@@ -38,12 +38,12 @@ cd windows-explorer-app
 # Install root dependencies
 npm install
 
-# Install backend dependencies
+# Install backend dependencies (From root)
 cd backend
 npm install
 
-# Install frontend dependencies
-cd ../frontend
+# Install frontend dependencies (From root)
+cd frontend
 npm install
 ```
 
@@ -67,15 +67,20 @@ npm run db:seed
 
 ### 5. Start Development Servers
 ```bash
-# Start both backend and frontend (from root directory)
-npm run dev
 
-# Or start them separately:
-npm run dev:backend  # Backend on http://localhost:3000
-npm run dev:frontend # Frontend on http://localhost:5173
+# start them separately:
+# Backend (from root)
+cd backend
+npm run dev
+http://localhost:3000
+
+#Frontend (from root)
+cd frontend
+npm run dev
+http://localhost:5173
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 windows-explorer-app/
@@ -101,56 +106,7 @@ windows-explorer-app/
 └── README.md
 ```
 
-## UI/UX Features
-
-### Glassmorphism Design
-- Translucent panels with backdrop blur effects
-- Layered shadows for depth and dimension
-- Smooth hover animations and transitions
-- Modern gradient backgrounds
-
-### Responsive Layout
-- Dual-panel design that adapts to screen size
-- Collapsible folder tree for mobile devices
-- Touch-friendly interface elements
-
-### Interactive Elements
-- Hover effects on folders and files
-- Smooth transitions and animations
-- Visual feedback for user actions
-
-## 🔧 Available Scripts
-
-### Root Directory
-```bash
-npm run dev              # Start both backend and frontend
-npm run dev:backend      # Start backend only
-npm run dev:frontend     # Start frontend only
-npm run build            # Build both applications
-npm run build:backend    # Build backend only
-npm run build:frontend   # Build frontend only
-npm run test             # Run tests for both
-npm run db:setup         # Setup database
-npm run db:migrate       # Run database migrations
-npm run db:seed          # Seed database with sample data
-```
-
-### Backend Directory
-```bash
-npm run dev              # Start development server
-npm run start            # Start production server
-npm run build            # Build TypeScript
-npm run test             # Run tests
-```
-
-### Frontend Directory
-```bash
-npm run dev              # Start development server
-npm run build            # Build for production
-npm run preview          # Preview production build
-```
-
-## 📊 API Endpoints
+## API Endpoints
 
 ### Folders
 - `GET /api/v1/folders/tree` - Get hierarchical folder structure
@@ -166,11 +122,7 @@ npm run preview          # Preview production build
 - `PUT /api/v1/files/:id` - Update file
 - `DELETE /api/v1/files/:id` - Delete file
 
-### Health & Documentation
-- `GET /health` - Health check endpoint
-- `GET /swagger` - API documentation
-
-## 🗄️ Database Schema
+## Database Schema
 
 ### Folders Table
 - `id` - Primary key
@@ -188,18 +140,6 @@ npm run preview          # Preview production build
 - `folderId` - Parent folder ID
 - `createdAt` - Creation timestamp
 - `updatedAt` - Last update timestamp
-
-## 🚀 Deployment
-
-### Backend Deployment
-1. Build the backend: `npm run build:backend`
-2. Set production environment variables
-3. Deploy to your preferred hosting service (Heroku, Vercel, etc.)
-
-### Frontend Deployment
-1. Build the frontend: `npm run build:frontend`
-2. Deploy the `dist` folder to a static hosting service
-3. Update API base URL for production
 
 
 
